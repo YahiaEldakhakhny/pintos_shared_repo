@@ -1,0 +1,18 @@
+Advanced Scheduler TO-DO LIST
+
+BEWARE => Any additions are put above magic.
+	   => Make sure to check that the thread is not idle before diving into the juicy stuff (updating variables/executing actions).
+	   => load_avg must be updated exactly when timer_ticks () % TIMER_FREQ == 0.
+
+Macros => NICE_MIN (-20), NICE_MAX (20), NICE_NORM (0), RECENT_CPU_INIT (0)
+
+Variables => nice & recent_cpu (initialized in thread_init) (in Thread Struct) + load_avg (global)
+
+Functions B.1 => int thread_get_nice (void) --> Returns the current thread’s nice value
+		  B.1 => void thread_set_nice (int new_nice) --> Sets the current thread’s nice value to new nice and recalculates the thread’s priority
+			     based on the new value. If the running thread no longer has the highest priority, it yields.
+		  B.2 => void calculate_advanced_priority (struct thread *cur) --> updates thread priority
+		  B.3 => void thread_get_recent_cpu (struct thread *cur) --> Calculates the current thread’s recent cpu value 100 times, rounded to the nearest
+				 integer and stores it in the thread's recent_cpu.
+		  B.4 => void thread_get_load_avg (void) --> Calculates the current system load average 100 times, rounded to the nearest integer.
+		  B.6 => Fixed-Point Shenanigans --> DONE
