@@ -71,6 +71,7 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
+void thread_yield_head (struct thread *cur);
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -200,6 +201,11 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+
+  // if (thread_mlfqs)
+  	/**Modification*/
+    if (priority > thread_current ()->priority)
+      thread_yield_head (thread_current ());
 
   return tid;
 }
@@ -591,6 +597,26 @@ allocate_tid (void)
   return tid;
 }
 
+/* OUR Implementation */
+void 
+thread_yield_head (struct thread *cur)
+{
+  enum intr_level old_level;
+  
+  ASSERT (!intr_context ());
+
+  old_level = intr_disable ();
+  if (cur != idle_thread)
+    /* Old Implementation
+    list_push_back (&ready_list, &cur->elem); */
+    /* My Implementation */
+    list_insert_ordered (&ready_list, &cur->elem, thread_insert_less_head, NULL);
+    /* == My Implementation */
+  cur->status = THREAD_READY;
+  schedule ();
+  intr_set_level (old_level);
+}
+
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
