@@ -1,0 +1,36 @@
+use ONE queue only
+iterate from oldest in the queue (FIFO)
+always pick the first max priority thread use > operator (greater than)
+------------------------------------------------------------------------------------------
+NICE Value [-20, 20]
+more nice == less priority
+initial thread has a 0 nice value
+threads inherit their parent's NICE value (& recent_cpu)
+NICE value can be changed using thread_set_nice --> MUST reschedule after that 
+##HOW to reschedule: see max priority in ready -> compare with running -> if running is lower => call thread_yield (BEWARE that there would be a tie IF both priorities are equal)##
+-----------------------------------------------------------------------------------------
+PRIORITY
+priority = PRI_MAX - (recent_cpu / 4) - (nice * 2);
+			63				how much did this thread spend on the CPU recently (@ ready -> low => high priority) (@ running -> high => low priority)
+-----------------------------------------------------------------------------------------
+IF Advanced (true)
+in thread_create -> for thread_init -> inherit recent_cpu & nice & create a priority for the new thread by the equation above
+-----------------------------------------------------------------------------------------
+recent_cpu
+Update for:
+RUNNING (except idle thread => the one created automatically @ pintOS startup) -> inc it by 1 each time timer_interrupt is called
+ALL -> each sec, calculate it using the following equation
+recent_cpu = (((2 * load_avg) / (2 * load_avg + 1)) * recent_cpu) + nice
+								no. of ready threads in the past minute (updated each sec on timer_interrupt --- system-wide), calculated by this equation:
+								load_avg = (59 / 60) * load_avg  +  (1 / 60) * ready_thread
+								### MUST BE IMPLEMENTED
+								thread_get_load_avg => returns (load_avg * 100)
+																						_ -> must be rounded to the nearest int
+-----------------------------------------------------------------------------------------
+MUST implement fixed point operations
+struct real {int val;}
+.h & .c files for that purpose
+##################DONE####################
+-----------------------------------------------------------------------------------------
+								
+								

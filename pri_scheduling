@@ -1,0 +1,16 @@
+if a thread has a higher priority value -> yield
+if a thraed's priority level is lowered -> yield
+blocked -> ready -> running
+a thread has to have the highest priority inn blocked to move to ready
+priority is an integer value -> hs to be approximated to nearest (use FP)
+Priority Inversion (single-level donation): => if H is waiting for L, L will inherit H's priority (old priority has to be preserved)
+
+Priority Donation (Multiple donations): => the highest kicks into effect
+			(Nested donations): => the highest priority thread checks which threads
+							have the lock -> donates its priority
+MUST DO => implement priority donation for LOCKS, NOT NEEDED for semaphores/variables
+	  => Implement priority scheduling for all cases
+
+Functions to implement:
+void thread_set_priority(int new_priority)
+int thread_get_priority(void)
