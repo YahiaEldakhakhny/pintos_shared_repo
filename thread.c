@@ -71,7 +71,8 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
-void thread_yield_head (struct thread *cur);
+/**Modification*/
+bool is_less(const struct list_elem *elem1,const struct list_elem *elem2,void* aux UNUSED);
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -205,7 +206,7 @@ thread_create (const char *name, int priority,
   // if (thread_mlfqs)
   	/**Modification*/
     if (priority > thread_current ()->priority)
-      thread_yield_head (thread_current ());
+      thread_yield();
 
   return tid;
 }
@@ -221,8 +222,17 @@ thread_block (void)
 {
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
-
-  thread_current ()->status = THREAD_BLOCKED;
+  //disable interrupts
+  enum intr_level old_level;
+  old_level = intr_disable ();
+  
+  struct thread *cur=thread_current ();
+  
+  //remove from ready list and block
+  list_remove(&(cur->elem));
+  cur->status = THREAD_BLOCKED;
+  //re enable interrupts
+  intr_set_level (old_level);
   schedule ();
 }
 
@@ -243,7 +253,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  list_insert_ordered (&ready_list, &t->elem, is_less, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -314,7 +324,8 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    list_insert_ordered (&ready_list, &cur->elem, is_less, NULL);
+
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -480,7 +491,7 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
-  t->base_priority = t->priority=priority;
+  t->old_priority = t->priority=priority;
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();
@@ -599,23 +610,13 @@ allocate_tid (void)
 }
 
 /* OUR Implementation */
-void 
-thread_yield_head (struct thread *cur)
+bool is_less(const struct list_elem *elem1,const struct list_elem *elem2,void* aux UNUSED)
 {
-  enum intr_level old_level;
+  struct thread *a, *b;
+  a = list_entry (elem1, struct thread, elem);
+  b = list_entry (elem2, struct thread, elem);
   
-  ASSERT (!intr_context ());
-
-  old_level = intr_disable ();
-  if (cur != idle_thread)
-    /* Old Implementation
-    list_push_back (&ready_list, &cur->elem); */
-    /* My Implementation */
-    list_insert_ordered (&ready_list, &cur->elem, thread_insert_less_head, NULL);
-    /* == My Implementation */
-  cur->status = THREAD_READY;
-  schedule ();
-  intr_set_level (old_level);
+  return (a->priority < b->priority);
 }
 
 /* Offset of `stack' member within `struct thread'.
