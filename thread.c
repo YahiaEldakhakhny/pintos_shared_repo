@@ -338,11 +338,8 @@ thread_set_priority (int new_priority)
   enum intr_level old_level = intr_disable();
   struct thread *t=thread_current();
   int old =t->priority;
-  t->old_priority=t->priority=new_priority;
-  if(t->status == THREAD_READY)
-  {
-    rem
-  }
+  t->base_priority=t->priority=new_priority;
+  
   //thread_current ()->priority = new_priority;
 }
 
@@ -470,7 +467,7 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
-  t->old_priority = t->priority=priority;
+  t->base_priority = t->priority=priority;
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();
