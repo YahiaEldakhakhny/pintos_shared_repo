@@ -71,6 +71,7 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
+
 /**Mod*/
 /*
 I will define all auxilary functions here inside this Mod block 
@@ -110,6 +111,7 @@ bool is_in_list(struct list *list, struct list_elem *target)
 }
 
 /**End of Mod*/
+
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -241,6 +243,11 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  // if (thread_mlfqs)
+  	/**Modification*/
+    if (priority > thread_current ()->priority)
+      thread_yield();
+
   return tid;
 }
 
@@ -263,6 +270,7 @@ thread_block (void)
   /*if the thread is in ready_list remove it*/
   if(is_in_list(&ready_list, &cur->elem)) list_remove(&(cur->elem));
   /**End Mod*/
+
   schedule ();
 }
 
@@ -283,6 +291,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
+
   /**Mod*/
   /*insert the thread in the ready list but make sure it is not already there*/
   if(!is_in_list(&ready_list, &t->elem)) list_insert_ordered (&ready_list, &t->elem, &list_priority_cmp, NULL);
@@ -357,7 +366,8 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    list_insert_ordered (&ready_list, &cur->elem, is_less, NULL);
+
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -385,6 +395,7 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
+
   struct thread *t = thread_current();
   t->old_priority = t->priority;
   t->priority = new_priority;
@@ -392,7 +403,6 @@ thread_set_priority (int new_priority)
   {
     thread_yield();
   }
-  
 }
 
 /* Returns the current thread's priority. */
@@ -639,6 +649,16 @@ allocate_tid (void)
   return tid;
 }
 
+/* OUR Implementation */
+bool is_less(const struct list_elem *elem1,const struct list_elem *elem2,void* aux UNUSED)
+{
+  struct thread *a, *b;
+  a = list_entry (elem1, struct thread, elem);
+  b = list_entry (elem2, struct thread, elem);
+  
+  return (a->priority < b->priority);
+}
+
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
