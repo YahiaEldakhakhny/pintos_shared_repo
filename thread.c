@@ -403,6 +403,7 @@ thread_set_priority (int new_priority)
   {
     thread_yield();
   }
+  //add
 }
 
 /* Returns the current thread's priority. */
