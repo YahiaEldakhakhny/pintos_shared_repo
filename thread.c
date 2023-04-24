@@ -366,7 +366,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_insert_ordered (&ready_list, &cur->elem, is_less, NULL);
+    list_insert_ordered (&ready_list, &cur->elem, list_priority_cmp, NULL);
 
   cur->status = THREAD_READY;
   schedule ();
@@ -649,16 +649,6 @@ allocate_tid (void)
   return tid;
 }
 
-/* OUR Implementation */
-bool is_less(const struct list_elem *elem1,const struct list_elem *elem2,void* aux UNUSED)
-{
-  struct thread *a, *b;
-  a = list_entry (elem1, struct thread, elem);
-  b = list_entry (elem2, struct thread, elem);
-  
-  return (a->priority < b->priority);
-}
-
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
