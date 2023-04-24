@@ -71,6 +71,46 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
+/**Mod*/
+/*
+I will define all auxilary functions here inside this Mod block 
+~yahia
+*/
+/*FUNCTION PROTOTYPES*/
+bool list_priority_cmp(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+bool is_in_list(struct list *list, struct list_elem *target);
+
+
+/*FUNCTION DEFINITIONS*/
+/*
+Function to compare the priority of 2 threads in the ready_list
+a is the list element associated with thread A
+b is the list element associated with thread B
+This function returns true if priority of A is less than priority of B and returns false otherwise
+*/
+bool list_priority_cmp(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+  struct thread *A = list_entry(a, struct thread, elem);
+  struct thread *B = list_entry(b, struct thread, elem);
+  return (A->priority < B->priority);
+}
+/*
+Function to find if target is in a list
+if elem is in list, the function returns true
+if elem is not found, the function returns false
+*/
+bool is_in_list(struct list *list, struct list_elem *target)
+{
+  for (struct list_elem *e = &list->head; e != &list->tail; e = e->next)
+  {
+    if(e == target) return true;
+  }
+  return false;
+  
+}
+
+/**End of Mod*/
+
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -216,7 +256,13 @@ thread_block (void)
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
 
-  thread_current ()->status = THREAD_BLOCKED;
+  /**Mod*/
+  struct thread *cur = thread_current ();
+  /*Change the status of the thread to blocked*/
+  cur->status = THREAD_BLOCKED;
+  /*if the thread is in ready_list remove it*/
+  if(is_in_list(&ready_list, &cur->elem)) list_remove(&(cur->elem));
+  /**End Mod*/
   schedule ();
 }
 
@@ -237,8 +283,11 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  /**Mod*/
+  /*insert the thread in the ready list but make sure it is not already there*/
+  if(!is_in_list(&ready_list, &t->elem)) list_insert_ordered (&ready_list, &t->elem, &list_priority_cmp, NULL);
   t->status = THREAD_READY;
+  /**End of Mod*/
   intr_set_level (old_level);
 }
 
@@ -502,7 +551,9 @@ next_thread_to_run (void)
   if (list_empty (&ready_list))
     return idle_thread;
   else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+    /**Mod*/
+    return list_entry (list_pop_back (&ready_list), struct thread, elem);
+    /**End of Mod*/
 }
 
 /* Completes a thread switch by activating the new thread's page

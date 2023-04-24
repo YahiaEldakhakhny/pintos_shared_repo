@@ -89,7 +89,8 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     /**Mod*/
-    int old_priority;                       /* Old Priority before donation. */
+    int old_priority;                   /* Old Priority before donation. */
+    /**End Mod*/
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
