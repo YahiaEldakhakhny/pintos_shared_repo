@@ -91,6 +91,7 @@ struct thread
     int priority;                       /* Priority. */
     /**Mod*/
     int old_priority;                   /* Old Priority before donation. */
+    bool donated;
     /**End Mod*/
     struct list_elem allelem;           /* List element for all threads list. */
 	

@@ -118,6 +118,7 @@ void donate_priority(struct thread *target,int new_priority)
     target->priority=new_priority;
     list_remove(&target->elem);
     list_insert_ordered (&ready_list, &target->elem, &list_priority_cmp, NULL);
+    target->donated=true;
   }
   intr_set_level (old_level);
 }
@@ -257,16 +258,14 @@ thread_create (const char *name, int priority,
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
   sf->ebp = 0;
-
   /* Add to run queue. */
   thread_unblock (t);
-
   // if (thread_mlfqs)
   	/**Modification*/
-    if (priority > thread_current ()->priority)
-    {
+    //if (priority > thread_current ()->priority)
+    //{
       thread_yield();
-    }
+    //}
   return tid;
 }
 
@@ -315,6 +314,7 @@ thread_unblock (struct thread *t)
   /*insert the thread in the ready list but make sure it is not already there*/
   if(!is_in_list(&ready_list, &t->elem)) list_insert_ordered (&ready_list, &t->elem, &list_priority_cmp, NULL);
   t->status = THREAD_READY;
+  list_sort(&ready_list,&list_priority_cmp_GT,NULL);
   /**End of Mod*/
   intr_set_level (old_level);
 }
@@ -547,6 +547,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   
   t->old_priority = t->priority=priority;
+  t->donated=false;
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();
@@ -579,7 +580,8 @@ next_thread_to_run (void)
     return idle_thread;
   else
     /**Mod*/
-    return list_entry (list_pop_back (&ready_list), struct thread, elem);
+    list_sort(&ready_list,&list_priority_cmp_GT,NULL);
+    return list_entry (list_pop_front (&ready_list), struct thread, elem);
     /**End of Mod*/
 }
 
