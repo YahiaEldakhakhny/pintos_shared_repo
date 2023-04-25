@@ -109,6 +109,24 @@ bool is_in_list(struct list *list, struct list_elem *target)
   return false;
   
 }
+void donate_priority(struct thread *target,int new_priority)
+{
+  enum intr_level old_level;
+  old_level = intr_disable ();
+  if(new_priority>target->priority)
+  {
+    target->priority=new_priority;
+    list_remove(&target->elem);
+    list_insert_ordered (&ready_list, &target->elem, &list_priority_cmp, NULL);
+  }
+  intr_set_level (old_level);
+}
+bool list_priority_cmp_GT(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+  struct thread *A = list_entry(a, struct thread, elem);
+  struct thread *B = list_entry(b, struct thread, elem);
+  return (A->priority > B->priority);
+}
 
 /**End of Mod*/
 
@@ -246,8 +264,9 @@ thread_create (const char *name, int priority,
   // if (thread_mlfqs)
   	/**Modification*/
     if (priority > thread_current ()->priority)
+    {
       thread_yield();
-
+    }
   return tid;
 }
 
@@ -397,12 +416,10 @@ thread_set_priority (int new_priority)
 {
 
   struct thread *t = thread_current();
-  t->old_priority = t->priority;
   t->priority = new_priority;
-  if (new_priority < t->old_priority)
-  {
-    thread_yield();
-  }
+  thread_yield();
+  
+  //add
 }
 
 /* Returns the current thread's priority. */
@@ -528,7 +545,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
-  t->priority = priority;
+  
   t->old_priority = t->priority=priority;
   t->magic = THREAD_MAGIC;
 
@@ -652,3 +669,4 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
