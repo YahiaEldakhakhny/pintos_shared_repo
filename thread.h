@@ -24,6 +24,16 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+/**MODIFICATIONS*/
+/* Thread Nice Values */
+#define NICE_MIN (-20)
+#define NICE_MAX 20
+#define NICE_DEFAULT 0
+
+/* Recent CPU Time initial value*/
+#define RECENT_CPU_INIT 0
+/***/
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -87,12 +97,7 @@ struct thread
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
-
     int priority;                       /* Priority. */
-    /**Mod*/
-    int old_priority;                   /* Old Priority before donation. */
-    bool donated;
-    /**End Mod*/
     struct list_elem allelem;           /* List element for all threads list. */
 	
     /* Shared between thread.c and synch.c. */
@@ -101,6 +106,18 @@ struct thread
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
 #endif
+
+    /**Mod*/ /***/
+    int old_priority;                   /* Old Priority before donation. */
+    bool donated;
+    struct list locks;                    /* A list of the locks held by thread /***/ */
+    struct lock *lock_blocked_by;         /* The lock that put the thread in blocked state*/
+    /**End Mod*/
+    
+    /**MODIFICATIONS*/ // For Advanced Scheduler
+    int nice;
+    int recent_cpu;
+    /***/
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
