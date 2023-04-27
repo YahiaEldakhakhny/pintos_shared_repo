@@ -70,6 +70,7 @@ sema_down (struct semaphore *sema)
   old_level = intr_disable ();
   while (sema->value == 0) 
     {
+      // QUESTION: why not use list_insert_ordered here? /***/
       list_push_back (&sema->waiters, &thread_current ()->elem);
       thread_block ();
     }
@@ -112,13 +113,31 @@ sema_up (struct semaphore *sema)
 {
   enum intr_level old_level;
 
+  /**MODIFICATION*/
+  struct thread *next = NULL; /* The top thread in the waiters list */
+  struct thread *cur = thread_current();
+  /***/
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
+
   if (!list_empty (&sema->waiters)) 
-    thread_unblock (list_entry (list_pop_front (&sema->waiters),
-                                struct thread, elem));
+  {
+    /**MODIFICATION*/ // stored the list entry in pointer to next thread
+    next = list_entry (list_pop_front (&sema->waiters), struct thread, elem);
+    thread_unblock (next);
+    /***/
+  }
+    
   sema->value++;
+
+  /**MODIFICATION*/
+  if (next != NULL && next->priority > cur->priority)
+    {
+      thread_yield_current (cur);
+    }
+  /***/
+
   intr_set_level (old_level);
 }
 
@@ -197,14 +216,32 @@ lock_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
+  /**MODIFICATION*/
+  enum intr_level old_level;
+  old_level = intr_disable ();
+  /***/
+
+  /***/
+  if (lock_holder != NULL) // lock is already acquired by another thread
+    (thread_current()->lock_blocked_by) = lock;
+  /***/
+
+
   /*modification*/
-  if (lock->holder != NULL && lock->holder->priority < thread_current ()->priority)
+  /**Suggested MODIFICATION: Change if with while + it needs SERIOUS working + added (!thread_mlfqs) condition*/
+  if ((lock->holder != NULL) && (lock->holder->priority < thread_current ()->priority) && (!thread_mlfqs))
     {
       donate_priority(lock->holder,thread_current ()->priority);
     }
-
+  /***/
   sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+  lock->holder = thread_current();
+  
+  /**MODIFICATION*/
+  if (!thread_mlfqs)
+    (thread_current()->lock_blocked_by) = NULL;
+  intr_set_level (old_level);
+  /***/
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -237,17 +274,35 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
+
+  /**MODIFICATION*/
+  enum intr_level old_level;
+  old_level = intr_disable ();
+  /***/
   
-  /*modification*/
-  struct semaphore* sem =&lock->semaphore;
-  if(lock->holder->donated){
-  thread_set_priority(lock->holder->old_priority);
-  lock->holder->donated=false;
-  }
-  list_sort(&sem->waiters,&list_priority_cmp_GT,NULL);
   lock->holder = NULL;
   sema_up (sem);
-  thread_yield();
+  /**MODIFICATION: Added if condition to do the following if it is using priority scheduling*/
+  if (!thread_mlfqs) // what is inside needs serious working
+  {
+    /*modification*/
+    
+    struct semaphore* sem =&lock->semaphore;
+    if(lock->holder->donated)
+    {
+      thread_set_priority(lock->holder->old_priority);
+      lock->holder->donated=false;
+    }
+    list_sort(&sem->waiters,&list_priority_cmp_GT,NULL);
+  
+    thread_yield();
+
+  }
+  /***/
+
+  /**MODIFICATION*/
+  intr_set_level (old_level);
+  /***/
 }
 
 /* Returns true if the current thread holds LOCK, false
