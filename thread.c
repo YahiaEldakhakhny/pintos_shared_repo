@@ -77,9 +77,6 @@ static tid_t allocate_tid (void);
 I will define all auxilary functions here inside this Mod block 
 ~yahia
 */
-/*FUNCTION PROTOTYPES*/
-bool list_priority_cmp(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
-bool is_in_list(struct list *list, struct list_elem *target);
 
 
 /*FUNCTION DEFINITIONS*/
@@ -115,6 +112,7 @@ void donate_priority(struct thread *target,int new_priority)
   old_level = intr_disable ();
   if(new_priority>target->priority)
   {
+    pri_push_stack(target, target->priority);
     target->priority=new_priority;
     list_remove(&target->elem);
     list_insert_ordered (&ready_list, &target->elem, &list_priority_cmp, NULL);
@@ -129,6 +127,55 @@ bool list_priority_cmp_GT(const struct list_elem *a, const struct list_elem *b, 
   return (A->priority > B->priority);
 }
 
+void pri_push_stack(struct thread *target, int pri)
+{
+
+  int *target_stack = target->pri_stack;
+  target->pri_index = (target->pri_index) + 1;
+  ASSERT((target->pri_index) < PRI_STACK_SIZE);
+
+  target_stack[target->pri_index] = pri;
+
+}
+
+void pri_pop_stack(struct thread *t)
+{
+
+  int *t_stack = t->pri_stack;
+  //ASSERT((target->pri_index) < PRI_STACK_SIZE);
+   /*Get the maximum priority and its position*/
+   int i;
+   int max_pri = PRI_MIN;
+   int max_pri_pos = 0;
+
+   for(i = 0; i < PRI_STACK_SIZE; i++)
+   {
+     if (t_stack[i] == PRI_STACK_FILLER) break;
+     if(t_stack[i] > max_pri)
+     {
+       max_pri = t_stack[i];
+       max_pri_pos = i;
+     }
+   }
+   /*Set thread priority to be the max value*/
+   t->priority = max_pri;
+  /*Check if the max priority is the base priority*/
+	if(max_pri_pos == 0){
+		return;
+	}   
+  /*Rearrange stack to make it continuous*/
+   int j;
+   for(j = max_pri_pos; j < PRI_STACK_SIZE - 1; j++)
+   {
+     if (t_stack[j] == PRI_STACK_FILLER)
+     {
+       t->pri_index = j - 1;
+       break;
+     }
+     t_stack[j] = t_stack[j+1];
+   }
+
+}
 /**End of Mod*/
 
 
@@ -262,10 +309,8 @@ thread_create (const char *name, int priority,
   thread_unblock (t);
   // if (thread_mlfqs)
   	/**Modification*/
-    //if (priority > thread_current ()->priority)
-    //{
-      thread_yield();
-    //}
+  thread_yield();
+  
   return tid;
 }
 
@@ -546,10 +591,22 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   
-  t->old_priority = t->priority=priority;
-  t->donated=false;
-  t->magic = THREAD_MAGIC;
+  //t->old_priority = t->priority=priority;
+  /**Mod*/
+ 	t->pri_index = 0;
+	t->priority = PRI_DEFAULT;
+	t->pri_stack[0] = t->priority;
 
+  int i;
+  for(i = 1; i < PRI_STACK_SIZE; i++)
+  {
+    t->pri_stack[i] = PRI_STACK_FILLER;
+  }
+
+  t->donated=false;
+  /**End Mod*/
+
+  t->magic = THREAD_MAGIC;
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);

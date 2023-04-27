@@ -241,7 +241,8 @@ lock_release (struct lock *lock)
   /*modification*/
   struct semaphore* sem =&lock->semaphore;
   if(lock->holder->donated){
-  thread_set_priority(lock->holder->old_priority);
+  //thread_set_priority(lock->holder->old_priority);
+  pri_pop_stack(lock->holder);
   lock->holder->donated=false;
   }
   list_sort(&sem->waiters,&list_priority_cmp_GT,NULL);

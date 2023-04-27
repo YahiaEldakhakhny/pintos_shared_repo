@@ -24,6 +24,10 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+/**Mod*/
+#define PRI_STACK_FILLER (-5)           /*Defualt priority value in stack*/
+#define PRI_STACK_SIZE 10               /*Size of priority stack*/
+/**End Mod*/
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -90,8 +94,10 @@ struct thread
 
     int priority;                       /* Priority. */
     /**Mod*/
-    int old_priority;                   /* Old Priority before donation. */
+    //int old_priority;                   /* Old Priority before donation. */
     bool donated;
+    int pri_stack[PRI_STACK_SIZE];
+    int pri_index;
     /**End Mod*/
     struct list_elem allelem;           /* List element for all threads list. */
 	
@@ -146,4 +152,11 @@ void donate_priority(struct thread *target,int new_priority);
 bool list_priority_cmp(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 bool is_in_list(struct list *list, struct list_elem *target);
 bool list_priority_cmp_GT(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+
+void pri_push_stack(struct thread *target, int pri);
+void pri_pop_stack(struct thread *t);
+
+
+
+
 #endif /* threads/thread.h */
