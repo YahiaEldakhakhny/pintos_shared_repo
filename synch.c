@@ -187,14 +187,26 @@ lock_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
+   
+   /**MODIFICATION*/
+  enum intr_level old_level;
+  old_level = intr_disable ();
+  /***/
+   
   /*modification*/
-  if (lock->holder != NULL && lock->holder->priority < thread_current ()->priority)
+  if ((lock->holder != NULL) && (lock->holder->priority < thread_current ()->priority) && (!thread_mlfqs))
     {
       donate_priority(lock->holder,thread_current ()->priority);
     }
 
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
+   
+   /**MODIFICATION*/
+  //if (!thread_mlfqs)
+    //(thread_current()->lock_blocked_by) = NULL;
+  intr_set_level (old_level);
+  /***/
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -225,17 +237,27 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
-  
-  /*modification*/
+   
+   /**MODIFICATION*/
+  enum intr_level old_level;
+  old_level = intr_disable ();
+  /***/
   struct semaphore* sem =&lock->semaphore;
-  if(lock->holder->donated){
-  thread_set_priority(lock->holder->old_priority);
-  lock->holder->donated=false;
-  }
-  list_sort(&sem->waiters,&list_priority_cmp_GT,NULL);
   lock->holder = NULL;
   sema_up (sem);
-  thread_yield();
+  if (!thread_mlfqs)
+  {
+      /*modification*/
+     if(lock->holder->donated){
+          thread_set_priority(lock->holder->old_priority);
+           lock->holder->donated=false;
+      }
+       list_sort(&sem->waiters,&list_priority_cmp_GT,NULL);
+       thread_yield();
+  }
+  /**MODIFICATION*/
+  intr_set_level (old_level);
+  /***/
 }
 
 /* Returns true if the current thread holds LOCK, false
