@@ -258,6 +258,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
   /* END MODIFICATIONS */
   
   thread_tick ();
+   /**MODIFICATION*/
+   /***/
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
