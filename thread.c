@@ -405,6 +405,32 @@ thread_yield (void)
   intr_set_level (old_level);
 }
 
+/**MODIFICATION*/
+/* Let the dum thread yields the CPU. The dum thread is not put to sleep
+ * and may be schedule again immediately at the scheduler's whim
+ */
+void
+thread_yield_current (struct thread *dum)
+{
+  ASSERT (is_thread (dum));
+  enum intr_level old_level;
+
+  ASSERT (!intr_context ());
+
+  old_level = intr_disable ();
+  if (dum != idle_thread) {
+    /* For PRIORITY propose
+     * Change the ready_list to an ordered list in order to make sure that
+     * the thread with highest priority in the ready list get run first
+     */
+    list_insert_ordered(&ready_list, &dum->elem, priority_more, NULL);
+  }
+  dum->status = THREAD_READY;
+  schedule ();
+  intr_set_level (old_level);
+}
+/***/
+
 /* Invoke function 'func' on all threads, passing along 'aux'.
    This function must be called with interrupts off. */
 void
@@ -444,12 +470,31 @@ thread_get_priority (void)
 
 
 /**ADVANCED SCHEDULER TERRITORY*/
+
+/**
+  * Objective One: Four built-in functions are filled in.
+  */
+
 /* Sets the current thread's nice value to NICE. */
 void
 thread_set_nice (int new_nice) 
 {
   /**MODIFICATION*/
   (thread_current()->nice) = new_nice;
+  thread_calculate_advanced_priority(); // update advanced priority after changing nice
+
+    if (cur->status == THREAD_READY)
+     {
+        enum intr_level old_level;
+        old_level = intr_disable ();
+        list_remove (&cur->elem);
+        list_insert_ordered (&ready_list, &cur->elem, priority_more, NULL);
+        intr_set_level (old_level);
+     }
+     else if ((cur->status == THREAD_RUNNING) && (list_entry(list_begin (&ready_list), struct thread, elem)->priority > cur->priority))
+       {
+         thread_yield_current(cur);
+       }
   /***/
 }
 
@@ -467,7 +512,7 @@ int
 thread_get_load_avg (void) 
 {
   /**MODIFICATION*/
-  return FP_CONVERT_TO_INT_NEAREST(((load_avg) * (100)));
+  return FP_CONVERT_TO_INT_NEAREST(FP_CONVERT_TO_FP((load_avg) * (100)));
   /***/
 }
 
@@ -476,9 +521,79 @@ int
 thread_get_recent_cpu (void) 
 {
   /**MODIFICATION*/
-  return FP_CONVERT_TO_INT_NEAREST(((thread_current ()->recent_cpu) * (100)));
+  return FP_CONVERT_TO_INT_NEAREST(FP_CONVERT_TO_FP((thread_current ()->recent_cpu) * (100)));
   /***/
 }
+
+/**
+  * Objective Two: Four functions that are built from scartch
+  */
+
+// the function calculates recent_cpu according to the equation:
+// recent_cpu = (((2 * load_avg) / (2 * load_avg + 1)) * recent_cpu) + nice
+void 
+thread_calculate_recent_cpu (struct thread *cur)
+{
+
+  if (cur != idle_thread)
+    {
+      int numerator = 2 * load_avg; // (2 * load_avg)
+      int denomenator = (2 * load_avg) + 1; // (2 * load_avg + 1)
+      int fraction = FP_DIVIDE(FP_CONVERT_TO_FP(numerator), FP_CONVERT_TO_FP(denomenator)); // numerator/denomenator (in FP ##)
+      cur->recent_cpu = fraction + (cur->nice);
+    }
+	
+}
+
+void
+thread_calculate_recent_cpu (void)
+{
+  calculate_recent_cpu (thread_current (), NULL);
+}
+
+// the function calculates the priority according to the equation: + reassigns it
+// priority = PRI_MAX - (recent_cpu / 4) - (nice * 2);
+void 
+calculate_advanced_priority (struct thread *cur)
+{
+  if (cur != idle_thread)
+    {
+      (cur->priority) = PRI_MAX - (CONVERT_TO_INT_NEAREST(DIVIDE(FP_CONVERT_TO_FP(cur->recent_cpu), FP_CONVERT_TO_FP(4)))) -  (cur->nice * 2);  
+      /* Make sure it falls in the priority boundry */
+      if (cur->priority < PRI_MIN)
+        {
+          cur->priority = PRI_MIN;
+        }
+      else if (cur->priority > PRI_MAX)
+        {
+          cur->priority = PRI_MAX;
+        }
+    }
+}
+
+void
+thread_calculate_advanced_priority (void)
+{
+  calculate_advanced_priority (thread_current (), NULL);
+}
+
+// load_avg = (59 / 60) * load_avg  +  (1 / 60) * ready_thread
+void 
+calculate_load_avg (void)
+{
+  int ready_threads;
+  ready_threads = list_size (&ready_list);
+
+  if (thread_current() != idle_thread)
+    {
+      ready_threads++;
+    }
+
+  int first_term = MULTIPLE(DIVIDE(FP_CONVERT_TO_FP(59), FP_CONVERT_TO_FP(60)), FP_CONVERT_TO_FP(load_avg));
+  int second_term = MULTIPLE(DIVIDE(FP_CONVERT_TO_FP(1), FP_CONVERT_TO_FP(60)), FP_CONVERT_TO_FP(ready_threads));
+  load_avg = first_term + second_term;
+}
+
 /**END OF ADVANCED SCHEDULER TERRITORY*/
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -566,6 +681,12 @@ init_thread (struct thread *t, const char *name, int priority)
   
   t->old_priority = t->priority=priority;
   t->donated=false;
+
+  /**MODIFICATION*/
+  t->nice = NICE_DEFAULT;
+  t->recent_cpu = RECENT_CPU_INIT;
+  /***/
+  
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
   
