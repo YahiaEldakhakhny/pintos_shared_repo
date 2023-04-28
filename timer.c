@@ -144,14 +144,12 @@ timer_sleep (int64_t ticks)
   curr_elem.curr_thread = curr;
   curr_elem.tick = ticks + start;
 
-  //lock_acquire(&sleep_list_lock);
   /**
    * Inserting elements in list in sorted manner is easier:
    * because removing first element from list is more efficient than traversing the entire list.
    */
    
   list_insert_ordered(&sleep_list, &curr_elem.list_el, &list_priority_cmp, NULL);
-  //lock_release(&sleep_list_lock);
   
   sema_down(&sem);
 
@@ -234,8 +232,9 @@ timer_interrupt (struct intr_frame *args UNUSED)
 /* MODIFICATIONS */
 
 /**
- * At each tick we traverse sleep_list
- * if any thread needs to be awake at current time, we realese the thread semaphore and take it out of sleep_list.
+ * scan all elements in the list.
+ * for each element, if ticks >= # ticks of the element
+ * remove that element from the list and wake it up
  */
 
   if(!list_empty(&sleep_list)){
@@ -249,10 +248,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
         list_remove(&curr_sleep_list_elem->list_el);
         sema_up(curr_sleep_list_elem->sem);
       }
-
     }
-
-    
   }
   
   /* END MODIFICATIONS */
