@@ -97,26 +97,22 @@ Function to find if target is in a list
 if elem is in list, the function returns true
 if elem is not found, the function returns false
 */
-bool is_in_list(struct list *list, struct list_elem *target)
+bool is_in_list(struct list_elem *elem)
 {
-  for (struct list_elem *e = &list->head; e != &list->tail; e = e->next)
-  {
-    if(e == target) return true;
-  }
-  return false;
+  return elem != NULL && elem->prev != NULL && elem->next != NULL;
   
 }
 void donate_priority(struct thread *target,int new_priority)
 {
-  enum intr_level old_level;
-  old_level = intr_disable ();
-  if(new_priority>target->priority)
+  enum intr_level old_level = intr_disable();
+
+  if(new_priority > thread_get_priority())
   {
+    target->donated=true;
     pri_push_stack(target, target->priority);
     target->priority=new_priority;
     list_remove(&target->elem);
     list_insert_ordered (&ready_list, &target->elem, &list_priority_cmp, NULL);
-    target->donated=true;
   }
   intr_set_level (old_level);
 }
@@ -140,9 +136,10 @@ void pri_push_stack(struct thread *target, int pri)
 
 void pri_pop_stack(struct thread *t)
 {
+  enum intr_level old_level = intr_disable();
 
   int *t_stack = t->pri_stack;
-  //ASSERT((target->pri_index) < PRI_STACK_SIZE);
+  ASSERT((t->pri_index) < PRI_STACK_SIZE);
    /*Get the maximum priority and its position*/
    int i;
    int max_pri = PRI_MIN;
@@ -161,6 +158,7 @@ void pri_pop_stack(struct thread *t)
    t->priority = max_pri;
   /*Check if the max priority is the base priority*/
 	if(max_pri_pos == 0){
+		t->pri_index = 0;
 		return;
 	}   
   /*Rearrange stack to make it continuous*/
@@ -174,6 +172,7 @@ void pri_pop_stack(struct thread *t)
      }
      t_stack[j] = t_stack[j+1];
    }
+  intr_set_level (old_level);
 
 }
 /**End of Mod*/
@@ -331,7 +330,7 @@ thread_block (void)
   /*Change the status of the thread to blocked*/
   cur->status = THREAD_BLOCKED;
   /*if the thread is in ready_list remove it*/
-  if(is_in_list(&ready_list, &cur->elem)) list_remove(&(cur->elem));
+  if(is_in_list(&cur->elem)) list_remove(&(cur->elem));
   /**End Mod*/
 
   schedule ();
@@ -357,9 +356,9 @@ thread_unblock (struct thread *t)
 
   /**Mod*/
   /*insert the thread in the ready list but make sure it is not already there*/
-  if(!is_in_list(&ready_list, &t->elem)) list_insert_ordered (&ready_list, &t->elem, &list_priority_cmp, NULL);
+  if(!is_in_list(&t->elem)) list_insert_ordered (&ready_list, &t->elem, &list_priority_cmp, NULL);
   t->status = THREAD_READY;
-  list_sort(&ready_list,&list_priority_cmp_GT,NULL);
+  //list_sort(&ready_list,&list_priority_cmp,NULL); not needed if list_insert_ordered works
   /**End of Mod*/
   intr_set_level (old_level);
 }
@@ -429,8 +428,16 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  if (cur != idle_thread) 
+  if (cur != idle_thread)
+  {
+    if (is_in_list(&cur->elem))
+    {
+      list_remove(&cur->elem);    
+    }
+
     list_insert_ordered (&ready_list, &cur->elem, list_priority_cmp, NULL);
+  }
+
 
   cur->status = THREAD_READY;
   schedule ();
@@ -459,12 +466,17 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-
+  
   struct thread *t = thread_current();
-  t->priority = new_priority;
+  if(t->donated){
+    t->pri_stack[0] = new_priority;
+  }
+  else{
+    t->pri_stack[0] = new_priority;
+    t->priority = new_priority;
+  }
   thread_yield();
   
-  //add
 }
 
 /* Returns the current thread's priority. */
@@ -594,7 +606,7 @@ init_thread (struct thread *t, const char *name, int priority)
   //t->old_priority = t->priority=priority;
   /**Mod*/
  	t->pri_index = 0;
-	t->priority = PRI_DEFAULT;
+	t->priority = priority;
 	t->pri_stack[0] = t->priority;
 
   int i;
@@ -634,12 +646,17 @@ static struct thread *
 next_thread_to_run (void) 
 {
   if (list_empty (&ready_list))
+  {
     return idle_thread;
+  }
   else
+  {
     /**Mod*/
-    list_sort(&ready_list,&list_priority_cmp_GT,NULL);
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+    list_sort(&ready_list,&list_priority_cmp,NULL);
+    return list_entry (list_pop_back (&ready_list), struct thread, elem);
     /**End of Mod*/
+  }
+    
 }
 
 /* Completes a thread switch by activating the new thread's page

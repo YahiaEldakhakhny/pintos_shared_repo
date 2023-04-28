@@ -150,7 +150,7 @@ int thread_get_load_avg (void);
 /*modification*/
 void donate_priority(struct thread *target,int new_priority);
 bool list_priority_cmp(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
-bool is_in_list(struct list *list, struct list_elem *target);
+bool is_in_list(struct list_elem *elem);
 bool list_priority_cmp_GT(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 
 void pri_push_stack(struct thread *target, int pri);
