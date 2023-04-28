@@ -14,11 +14,19 @@
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
+/**MODIFICATION*/
+#include "fixed_point.h"
+/***/
 
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
+
+/**MODIFICATION*/
+/*Defining Average Load*/
+static int load_avg;
+/***/
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
@@ -156,6 +164,10 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+   /**MODIFICATION*/
+   /* At system boot, it is initialized to 0 */
+   load_avg = 0;
+   /***/
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -255,12 +267,17 @@ thread_create (const char *name, int priority,
   sf->ebp = 0;
   /* Add to run queue. */
   thread_unblock (t);
-  // if (thread_mlfqs)
-  	/**Modification*/
-    //if (priority > thread_current ()->priority)
-    //{
-      thread_yield();
-    //}
+  /**MODIFICATION*/
+   if (thread_mlfqs)
+    {
+      calculate_recent_cpu (t, NULL);
+      calculate_advanced_priority (t, NULL);
+      thread_calculate_recent_cpu ();
+      thread_calculate_advanced_priority ();
+    }
+   /***/
+  thread_yield();
+   
   return tid;
 }
 
@@ -538,11 +555,30 @@ init_thread (struct thread *t, const char *name, int priority)
   
   t->old_priority = t->priority=priority;
   t->donated=false;
-  t->magic = THREAD_MAGIC;
-
-  old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
+  
+   /**MODIFICATION*/
+  if (thread_mlfqs)
+    {
+     
+      if (t == initial_thread)
+        {
+          t->nice = NICE_DEFAULT;
+          t->recent_cpu = RECENT_CPU_BEGIN;
+        }
+      else
+        {
+          t->nice = thread_get_nice ();
+          t->recent_cpu = thread_get_recent_cpu ();
+        }
+    } 
+   /***/
+  
+   t->magic = THREAD_MAGIC;
+
+  old_level = intr_disable ();
+  
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
