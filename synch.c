@@ -201,7 +201,7 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
   /*modification*/
-  if (lock->holder != NULL && lock->holder->priority < thread_current ()->priority)
+  if (lock->holder != NULL && lock->holder->priority < thread_current ()->priority && (!thread_mlfqs))
     {
       donate_priority(lock->holder,thread_current ()->priority);
     }
@@ -241,10 +241,13 @@ lock_release (struct lock *lock)
   
   /*modification*/
   struct semaphore* sem =&lock->semaphore;
-  if(lock->holder->donated){
-  thread_set_priority(lock->holder->old_priority);
-  lock->holder->donated=false;
-  }
+  if (!thread_mlfqs)
+  {
+    if(lock->holder->donated){
+    thread_set_priority(lock->holder->old_priority);
+    lock->holder->donated=false;
+    }
+  } 
   list_sort(&sem->waiters,&list_priority_cmp,NULL);
   lock->holder = NULL;
   sema_up (sem);
