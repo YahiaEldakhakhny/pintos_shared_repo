@@ -117,7 +117,7 @@ sema_up (struct semaphore *sema)
   
   /**Mod*/
   /*I want to yield only in regular threads not interrupt handlers
-  This is because timer interrupt handler uses semaphores but an interrupt should not yiels*/
+  This is because timer interrupt handler uses semaphores but an interrupt should not yield*/
   if(!intr_context())
   {
     thread_yield();
@@ -197,17 +197,22 @@ lock_init (struct lock *lock)
 void
 lock_acquire (struct lock *lock)
 {
+  if(DEBUG) printf("Thread %s is trying to acquire lock, and its priority is %d\n", thread_name(), thread_get_priority());
+
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
   /*modification*/
-  if (lock->holder != NULL && lock->holder->priority < thread_current ()->priority)
-    {
-      donate_priority(lock->holder,thread_current ()->priority);
-    }
+  struct thread *t = thread_current();
+  if (lock->holder != NULL && lock->holder->priority < t->priority)
+  {
+    if(DEBUG) printf("Thread %s is trying to donate to thread %s\n", thread_name(), lock->holder->name);
+    
+    donate_priority(lock->holder, t->priority);
+  }
 
   sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+  lock->holder = t;
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -241,10 +246,12 @@ lock_release (struct lock *lock)
   
   /*modification*/
   struct semaphore* sem =&lock->semaphore;
-  if(lock->holder->donated){
-  thread_set_priority(lock->holder->old_priority);
-  lock->holder->donated=false;
+
+  /*If the current priority of the thread was donated to it by another thread, then we should pop the priority stack*/
+  if(is_donated(lock->holder)){
+    pri_pop_stack(lock->holder);
   }
+  
   list_sort(&sem->waiters,&list_priority_cmp,NULL);
   lock->holder = NULL;
   sema_up (sem);
