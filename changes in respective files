@@ -1,0 +1,39 @@
+In thread.c
+
+added the functions:
+
+list_priority_cmp (less function used for sorting)
+returns true if the element is smaller
+
+list_priority_cmp_GT(less function used for sorting)
+returns true if the element is greater
+
+donate_priority (donates a specific priority to a specific thread)
+
+is_in_list (checks if the element is in the list)
+
+modifications:
+
+modified the thread create function to yield after it finishes
+
+modified thread block function to remove from ready list and give the thread blocked status
+
+modified thread unblock to put the thread in ready list
+
+modified set priority 
+
+modified next thread to run to sort the ready list before choosing the next thread to run
+
+In thread.h
+
+added the bool donated to check if donation happened
+
+added old priority variable
+
+In synch.c
+
+modified lock aquire to donate priority if the current thread has higher priority than the lock holder
+
+modified lock release to check if donation happened to restore the priority
+
+modified cond_wait and cond_signal to sort waiters list
