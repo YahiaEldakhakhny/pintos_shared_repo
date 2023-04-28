@@ -203,6 +203,7 @@ void print_list(struct list *l){
 void
 thread_init (void) 
 {
+  printf("\nEntered thread_init\n");
   ASSERT (intr_get_level () == INTR_OFF);
 
   lock_init (&tid_lock);
@@ -221,6 +222,8 @@ thread_init (void)
 void
 thread_start (void) 
 {
+  printf("\nEntered thread_start\n");
+
   /* Create the idle thread. */
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
@@ -280,6 +283,8 @@ tid_t
 thread_create (const char *name, int priority,
                thread_func *function, void *aux) 
 {
+  printf("\nEntered thread_create\n");
+
   struct thread *t;
   struct kernel_thread_frame *kf;
   struct switch_entry_frame *ef;
@@ -335,8 +340,8 @@ thread_block (void)
   struct thread *cur = thread_current ();
   /*Change the status of the thread to blocked*/
   cur->status = THREAD_BLOCKED;
-  /*if the thread is in ready_list remove it*/
-  if(is_in_list(&cur->elem)) list_remove(&(cur->elem));
+  /*Remove the thread from ready_list*/
+  list_remove(&(cur->elem));
   /**End Mod*/
 
   schedule ();
@@ -360,8 +365,8 @@ thread_unblock (struct thread *t)
   ASSERT (t->status == THREAD_BLOCKED);
 
   /**Mod*/
-  /*insert the thread in the ready list but make sure it is not already there*/
-  if(!is_in_list(&t->elem)) list_insert_ordered (&ready_list, &t->elem, &list_priority_cmp, NULL);
+  /*insert the thread in the ready list*/
+  list_insert_ordered (&ready_list, &t->elem, &list_priority_cmp, NULL);
   t->status = THREAD_READY;
   //list_sort(&ready_list,&list_priority_cmp,NULL); not needed if list_insert_ordered works
   /**End of Mod*/
@@ -381,6 +386,8 @@ thread_name (void)
 struct thread *
 thread_current (void) 
 {
+  printf("\nEntered thread_current\n");
+
   struct thread *t = running_thread ();
   
   /* Make sure T is really a thread.
@@ -594,6 +601,8 @@ is_thread (struct thread *t)
 static void
 init_thread (struct thread *t, const char *name, int priority)
 {
+  printf("\nEntered init_thread\n");
+
   enum intr_level old_level;
 
   ASSERT (t != NULL);
@@ -660,7 +669,7 @@ next_thread_to_run (void)
     /**Mod*/
     //list_sort(&ready_list,&list_priority_cmp,NULL);
     struct thread *next = list_entry (list_pop_back (&ready_list), struct thread, elem);
-    printf("\n priority of chosen thread is %d\n and its status is %d", next->priority, next->status);
+    printf("\n priority of chosen thread is %d\n and its status is %d\n", next->priority, next->status);
     return next;
     /**End of Mod*/
   }
@@ -719,6 +728,8 @@ thread_schedule_tail (struct thread *prev)
 static void
 schedule (void) 
 {
+  printf("\nEntered schedule\n");
+
   struct thread *cur = running_thread ();
   struct thread *next = next_thread_to_run ();
   struct thread *prev = NULL;
