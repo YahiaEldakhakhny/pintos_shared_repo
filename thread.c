@@ -276,8 +276,11 @@ thread_create (const char *name, int priority,
       thread_calculate_advanced_priority ();
     }
    /***/
-  thread_yield();
-   
+
+  /**MODIFICATION: Yield to t thread ONLY if current thread has less priority*/
+  if (t->priority > thread_current ()-> priority)
+  	thread_yield();
+   /***/
   return tid;
 }
 
@@ -439,36 +442,44 @@ thread_get_priority (void)
   return thread_current ()->priority;
 }
 
+
+/**ADVANCED SCHEDULER TERRITORY*/
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED) 
+thread_set_nice (int new_nice) 
 {
-  /* Not yet implemented. */
+  /**MODIFICATION*/
+  (thread_current()->nice) = new_nice;
+  /***/
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  /**MODIFICATION*/
+  return (thread_current()->nice);
+  /***/
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  /**MODIFICATION*/
+  return FP_CONVERT_TO_INT_NEAREST(((load_avg) * (100)));
+  /***/
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  /**MODIFICATION*/
+  return FP_CONVERT_TO_INT_NEAREST(((thread_current ()->recent_cpu) * (100)));
+  /***/
 }
+/**END OF ADVANCED SCHEDULER TERRITORY*/
 
 /* Idle thread.  Executes when no other thread is ready to run.
    The idle thread is initially put on the ready list by
