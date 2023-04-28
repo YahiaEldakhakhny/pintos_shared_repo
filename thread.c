@@ -112,13 +112,14 @@ bool is_in_list(struct list *list, struct list_elem *target)
 
 void pri_push_stack(struct thread *target, int pri)
 {
-
   int *target_stack = target->pri_stack;
-  target->pri_index = (target->pri_index) + 1;
-  ASSERT((target->pri_index) < PRI_STACK_SIZE);
 
-  target_stack[target->pri_index] = pri;
+  if(pri > target_stack[target->pri_index]){
+    target->pri_index = (target->pri_index) + 1;
+    ASSERT((target->pri_index) < PRI_STACK_SIZE);
 
+    target_stack[target->pri_index] = pri;
+  }
 }
 
 
@@ -175,12 +176,12 @@ void donate_priority(struct thread *target,int new_priority)
 {
   enum intr_level old_level = intr_disable();
 
-  if(new_priority > thread_get_priority())
+  if(new_priority > target->priority)
   {
     /*Push old priority on stack*/
     pri_push_stack(target, target->priority);
     /*Set priority = new_priority*/
-    target->priority=new_priority;
+    target->priority = new_priority;
     /*Sort ready_list to reflect new thread priority*/
     list_sort(&ready_list, &list_priority_cmp, NULL);
   }

@@ -197,13 +197,16 @@ lock_init (struct lock *lock)
 void
 lock_acquire (struct lock *lock)
 {
-  if(DEBUG) printf("Thread %s is trying to acquire lock, and its priority is %d\n", thread_name(), thread_get_priority());
-
+  
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
   /*modification*/
   struct thread *t = thread_current();
+  if(DEBUG && strcmp(t->name, "main")){
+    printf("Thread %s is trying to acquire lock, and its priority is %d\n", t->name, t->priority);
+  } 
+
   if (lock->holder != NULL && lock->holder->priority < t->priority)
   {
     if(DEBUG) printf("Thread %s is trying to donate to thread %s\n", thread_name(), lock->holder->name);

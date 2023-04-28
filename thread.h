@@ -40,7 +40,7 @@ typedef int tid_t;
 #define RECENT_CPU_INIT 0
 /***/
 
-#define DEBUG 0
+#define DEBUG 1
 /* A kernel thread or user process.
    Each thread structure is stored in its own 4 kB page.  The
    thread structure itself sits at the very bottom of the page
