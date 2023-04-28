@@ -175,6 +175,18 @@ void pri_pop_stack(struct thread *t)
   intr_set_level (old_level);
 
 }
+
+void print_list(struct list *l){
+    struct list_elem *e;
+    struct thread *t;
+    for ( e = list_begin(l); e != list_end(l); e = list_next(e))
+    {
+        t = list_entry(e, struct thread, elem);
+        printf("%d=>", t->priority);
+    }
+    printf("end\n");
+    
+}
 /**End of Mod*/
 
 
@@ -645,6 +657,10 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
+  printf("\nEntered next_thread_to_run");
+  printf("\nready list: ");
+  print_list(&ready_list);
+
   if (list_empty (&ready_list))
   {
     return idle_thread;
@@ -652,8 +668,10 @@ next_thread_to_run (void)
   else
   {
     /**Mod*/
-    list_sort(&ready_list,&list_priority_cmp,NULL);
-    return list_entry (list_pop_back (&ready_list), struct thread, elem);
+    //list_sort(&ready_list,&list_priority_cmp,NULL);
+    struct thread *next = list_entry (list_pop_back (&ready_list), struct thread, elem);
+    printf("\n priority of chosen thread is %d\n and its status is %d", next->priority, next->status);
+    return next;
     /**End of Mod*/
   }
     

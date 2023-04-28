@@ -239,11 +239,15 @@ timer_interrupt (struct intr_frame *args UNUSED)
  */
 
   while(!list_empty(&sleep_list)){
-    struct sleep_list_elem* curr = list_entry(list_begin(&sleep_list), struct sleep_list_elem, list_el);
+    /*Mod*/
+    struct sleep_list_elem* curr = list_entry(list_back(&sleep_list), struct sleep_list_elem, list_el);
+    /*End Mod*/
 
     if(ticks >= curr->tick){
       sema_up(curr->sem);
-      list_pop_front(&sleep_list);
+      /*Mod*/
+      list_pop_back(&sleep_list);
+      /*End Mod*/
       continue;
     }
     break;
