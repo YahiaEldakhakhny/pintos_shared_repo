@@ -109,6 +109,7 @@ bool is_in_list(struct list *list, struct list_elem *target)
   return false;
   
 }
+
 void donate_priority(struct thread *target,int new_priority)
 {
   enum intr_level old_level;
@@ -122,6 +123,7 @@ void donate_priority(struct thread *target,int new_priority)
   }
   intr_set_level (old_level);
 }
+
 bool list_priority_cmp_GT(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
   struct thread *A = list_entry(a, struct thread, elem);
@@ -256,11 +258,8 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
   // if (thread_mlfqs)
-  	/**Modification*/
-    //if (priority > thread_current ()->priority)
-    //{
-      thread_yield();
-    //}
+	/**Modification*/
+  thread_yield();
   return tid;
 }
 
@@ -305,7 +304,7 @@ thread_unblock (struct thread *t)
 
   /**Mod*/
   /*insert the thread in the ready list but make sure it is not already there*/
-  if(!is_in_list(&ready_list, &t->elem)) list_insert_ordered (&ready_list, &t->elem, &list_priority_cmp, NULL);
+  list_insert_ordered (&ready_list, &t->elem, &list_priority_cmp, NULL);
   t->status = THREAD_READY;
   list_sort(&ready_list,&list_priority_cmp_GT,NULL);
   /**End of Mod*/

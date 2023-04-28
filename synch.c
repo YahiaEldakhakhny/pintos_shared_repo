@@ -114,6 +114,16 @@ sema_up (struct semaphore *sema)
     thread_unblock (list_entry (list_pop_back (&sema->waiters),
                                 struct thread, elem));
   sema->value++;
+  
+  /**Mod*/
+  /*I want to yield only in regular threads not interrupt handlers
+  This is because timer interrupt handler uses semaphores but an interrupt should not yiels*/
+  if(!intr_context())
+  {
+    thread_yield();
+  }
+  /**End Mod*/
+
   intr_set_level (old_level);
 }
 
