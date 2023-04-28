@@ -144,14 +144,14 @@ timer_sleep (int64_t ticks)
   curr_elem.curr_thread = curr;
   curr_elem.tick = ticks + start;
 
-  lock_acquire(&sleep_list_lock);
+  //lock_acquire(&sleep_list_lock);
   /**
    * Inserting elements in list in sorted manner is easier:
    * because removing first element from list is more efficient than traversing the entire list.
    */
    
-  list_insert_ordered(&sleep_list, &curr_elem.list_el, &compare, NULL);
-  lock_release(&sleep_list_lock);
+  list_insert_ordered(&sleep_list, &curr_elem.list_el, &list_priority_cmp, NULL);
+  //lock_release(&sleep_list_lock);
   
   sema_down(&sem);
 
@@ -238,15 +238,21 @@ timer_interrupt (struct intr_frame *args UNUSED)
  * if any thread needs to be awake at current time, we realese the thread semaphore and take it out of sleep_list.
  */
 
-  while(!list_empty(&sleep_list)){
-    struct sleep_list_elem* curr = list_entry(list_begin(&sleep_list), struct sleep_list_elem, list_el);
+  if(!list_empty(&sleep_list)){
 
-    if(ticks >= curr->tick){
-      sema_up(curr->sem);
-      list_pop_front(&sleep_list);
-      continue;
+    for(struct list_elem *e = list_rbegin(&sleep_list); e != list_rend(&sleep_list); e = list_prev(e))
+    {
+      struct sleep_list_elem *curr_sleep_list_elem = list_entry(e, struct sleep_list_elem, list_el);
+      
+      if(ticks >= curr_sleep_list_elem->tick)
+      {
+        list_remove(&curr_sleep_list_elem->list_el);
+        sema_up(curr_sleep_list_elem->sem);
+      }
+
     }
-    break;
+
+    
   }
   
   /* END MODIFICATIONS */
