@@ -102,37 +102,19 @@ bool is_in_list(struct list_elem *elem)
   return elem != NULL && elem->prev != NULL && elem->next != NULL;
   
 }
-void donate_priority(struct thread *target,int new_priority)
-{
-  enum intr_level old_level = intr_disable();
-
-  if(new_priority > thread_get_priority())
-  {
-    target->donated=true;
-    pri_push_stack(target, target->priority);
-    target->priority=new_priority;
-    list_remove(&target->elem);
-    list_insert_ordered (&ready_list, &target->elem, &list_priority_cmp, NULL);
-  }
-  intr_set_level (old_level);
-}
-bool list_priority_cmp_GT(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
-{
-  struct thread *A = list_entry(a, struct thread, elem);
-  struct thread *B = list_entry(b, struct thread, elem);
-  return (A->priority > B->priority);
-}
 
 void pri_push_stack(struct thread *target, int pri)
 {
-
   int *target_stack = target->pri_stack;
-  target->pri_index = (target->pri_index) + 1;
-  ASSERT((target->pri_index) < PRI_STACK_SIZE);
 
-  target_stack[target->pri_index] = pri;
+  if(pri > target_stack[target->pri_index]){
+    target->pri_index = (target->pri_index) + 1;
+    ASSERT((target->pri_index) < PRI_STACK_SIZE);
 
+    target_stack[target->pri_index] = pri;
+  }
 }
+
 
 void pri_pop_stack(struct thread *t)
 {
@@ -176,6 +158,41 @@ void pri_pop_stack(struct thread *t)
 
 }
 
+/*Function to find if the current priority of a thread is donated or is it the thread's base priority*/
+bool is_donated(struct thread *t)
+{
+  /*if the thread's priority is not equal to its base priority then it is donated*/
+  return t->priority != t->pri_stack[0];
+}
+
+void donate_priority(struct thread *target,int new_priority)
+{
+  enum intr_level old_level = intr_disable();
+
+  if(new_priority > target->priority)
+  {
+    /*Push old priority on stack*/
+    pri_push_stack(target, target->priority);
+    /*Set priority = new_priority*/
+    target->priority = new_priority;
+    /*Sort ready_list to reflect new thread priority*/
+    list_sort(&ready_list, &list_priority_cmp, NULL);
+  }
+  intr_set_level (old_level);
+}
+
+/*
+Returns true if priority of a is greater than that of b
+and returns false otherwise
+*/
+bool list_priority_cmp_GT(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+  struct thread *A = list_entry(a, struct thread, elem);
+  struct thread *B = list_entry(b, struct thread, elem);
+  return (A->priority > B->priority);
+}
+
+/*Function to print a list (used for debugging)*/
 void print_list(struct list *l){
     struct list_elem *e;
     struct thread *t;
@@ -187,6 +204,10 @@ void print_list(struct list *l){
     printf("end\n");
     
 }
+
+
+
+
 /**End of Mod*/
 
 
@@ -319,9 +340,8 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
   // if (thread_mlfqs)
-  	/**Modification*/
+	/**Modification*/
   thread_yield();
-  
   return tid;
 }
 
@@ -365,7 +385,7 @@ thread_unblock (struct thread *t)
   ASSERT (t->status == THREAD_BLOCKED);
 
   /**Mod*/
-  /*insert the thread in the ready list*/
+  /*insert the thread in the ready list but make sure it is not already there*/
   list_insert_ordered (&ready_list, &t->elem, &list_priority_cmp, NULL);
   t->status = THREAD_READY;
   //list_sort(&ready_list,&list_priority_cmp,NULL); not needed if list_insert_ordered works
@@ -478,15 +498,15 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  
+  /*This function is only used when we want to change the base priority of a thread
+  if we want to donate a priority, we use the functions pri_pop_stack and pri_push_stack.
+  */
+
   struct thread *t = thread_current();
-  if(t->donated){
-    t->pri_stack[0] = new_priority;
-  }
-  else{
-    t->pri_stack[0] = new_priority;
-    t->priority = new_priority;
-  }
+  t->priority = new_priority;
+  /*Account for stack logic as well*/
+  t->pri_stack[0] = t->priority;
+
   thread_yield();
   
 }
@@ -615,19 +635,19 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   
   //t->old_priority = t->priority=priority;
-  /**Mod*/
- 	t->pri_index = 0;
-	t->priority = priority;
-	t->pri_stack[0] = t->priority;
+  t->pri_index = 0;
+  t->priority = priority;
+  t->pri_stack[0] = t->priority;
 
-  int i;
-  for(i = 1; i < PRI_STACK_SIZE; i++)
+  /*initialize pri_stack with filler value (except the first element which is reserved for base priority)*/
+  for(int i = 1; i < PRI_STACK_SIZE; i++)
   {
     t->pri_stack[i] = PRI_STACK_FILLER;
   }
 
-  t->donated=false;
-  /**End Mod*/
+
+
+  t->magic = THREAD_MAGIC;
 
   t->magic = THREAD_MAGIC;
   old_level = intr_disable ();
@@ -667,10 +687,8 @@ next_thread_to_run (void)
   else
   {
     /**Mod*/
-    //list_sort(&ready_list,&list_priority_cmp,NULL);
-    struct thread *next = list_entry (list_pop_back (&ready_list), struct thread, elem);
-    printf("\n priority of chosen thread is %d\n and its status is %d\n", next->priority, next->status);
-    return next;
+    list_sort(&ready_list,&list_priority_cmp,NULL);
+    return list_entry (list_pop_back (&ready_list), struct thread, elem);
     /**End of Mod*/
   }
     

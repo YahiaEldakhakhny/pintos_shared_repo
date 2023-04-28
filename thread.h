@@ -19,6 +19,7 @@ enum thread_status
 typedef int tid_t;
 #define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. */
 
+
 /* Thread priorities. */
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
@@ -39,6 +40,7 @@ typedef int tid_t;
 #define RECENT_CPU_INIT 0
 /***/
 
+#define DEBUG 1
 /* A kernel thread or user process.
    Each thread structure is stored in its own 4 kB page.  The
    thread structure itself sits at the very bottom of the page
@@ -100,7 +102,7 @@ struct thread
     int priority;                       /* Priority. */
     /**Mod*/
     //int old_priority;                   /* Old Priority before donation. */
-    bool donated;
+    //bool donated;
     int pri_stack[PRI_STACK_SIZE];
     int pri_index;
     /**End Mod*/
@@ -157,11 +159,11 @@ void donate_priority(struct thread *target,int new_priority);
 bool list_priority_cmp(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 bool is_in_list(struct list_elem *elem);
 bool list_priority_cmp_GT(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
-
+/*Mod*/
+bool is_donated(struct thread *t);
 void pri_push_stack(struct thread *target, int pri);
 void pri_pop_stack(struct thread *t);
+/*End Mod*/
+#endif 
 
-
-
-
-#endif /* threads/thread.h */
+/* threads/thread.h */
