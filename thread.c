@@ -14,9 +14,6 @@
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
-/**MODIFICATION*/
-#include "fixed_point.h"
-/***/
 
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
@@ -24,6 +21,7 @@
 #define THREAD_MAGIC 0xcd6abf4b
 
 /**MODIFICATION*/
+#include "fixed_point.h"
 /*Defining Average Load*/
 static int load_avg;
 /***/
@@ -166,10 +164,10 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+  
   /**MODIFICATION*/
-   /* At system boot, it is initialized to 0 */
-   load_avg = 0;
-   /***/
+  load_avg = 0;
+  /***/
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -269,9 +267,6 @@ thread_create (const char *name, int priority,
   sf->ebp = 0;
   /* Add to run queue. */
   thread_unblock (t);
-  // if (thread_mlfqs)
-	/**Modification*/
-  //if (t->priority > thread_current ()-> priority) // uncomment this and see what happens
   thread_yield();
   return tid;
 }
@@ -442,111 +437,111 @@ thread_get_priority (void)
 void
 thread_set_nice (int new_nice) 
 {
-  /**MODIFICATION*/
-  (thread_current()->nice) = new_nice;
-  update_advanced_priority(thread_current(), NULL); // update advanced priority after changing nice (will uncomment this)
-  thread_yield();
+   /**MODIFICATION*/
+   (thread_current()->nice) = new_nice;
+   update_advanced_priority(thread_current(), NULL); // update advanced priority after changing nice (will uncomment this)
+   thread_yield();
+   /***/
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /**MODIFICATION*/
-  return (thread_current()->nice);
-  /***/
+   /**MODIFICATION*/
+   return (thread_current()->nice);
+   /***/
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  /**MODIFICATION*/
-  return FP_CONVERT_TO_INT_NEAREST(FP_CONVERT_TO_FP((load_avg) * (100)));
-  /***/
+   /**MODIFICATION*/
+   return FP_CONVERT_TO_INT_NEAREST(FP_CONVERT_TO_FP((load_avg) * (100)));
+   /***/
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /**MODIFICATION*/
-  return FP_CONVERT_TO_INT_NEAREST(FP_CONVERT_TO_FP((thread_current ()->recent_cpu) * (100)));
-  /***/
+   /**MODIFICATION*/
+   return FP_CONVERT_TO_INT_NEAREST(FP_CONVERT_TO_FP((thread_current ()->recent_cpu) * (100)));
+   /***/
 }
 
+/* increments recent_cpu every tick for non-idle threads */
 void
 increment_recent_cpu(void)
 {
-  ASSERT(thread_mlfqs);
-  ASSERT(intr_context());
+   ASSERT(thread_mlfqs);
+   ASSERT(intr_context());
   
-  if (thread_current() == idle_thread)
-  {
-    thread_current()->recent_cpu++; /***/
-  }
+   if (thread_current() == idle_thread)
+   {
+      thread_current()->recent_cpu++;
+   }
 }
 
-// load_avg = (59 / 60) * load_avg  +  (1 / 60) * ready_thread
+/* load_avg = (59 / 60) * load_avg  +  (1 / 60) * ready_thread */
 void 
 update_load_avg (void) // calculate load_avg in fixed-point format
 {
-  ASSERT(thread_mlfqs);
-  ASSERT(intr_context());
+   ASSERT(thread_mlfqs);
+   ASSERT(intr_context());
   
-  int ready_threads;
-  ready_threads = list_size (&ready_list);
+   int ready_threads;
+   ready_threads = list_size (&ready_list);
 
-  if (thread_current()->status != idle_thread)
-    {
+   if (thread_current()->status != idle_thread)
+   {
       ready_threads++;
-    }
+   }
 
   int first_term = FP_MULTIPLY(FP_DIVIDE(FP_CONVERT_TO_FP(59), FP_CONVERT_TO_FP(60)), FP_CONVERT_TO_FP(load_avg));
   int second_term = FP_MULTIPLY(FP_DIVIDE(FP_CONVERT_TO_FP(1), FP_CONVERT_TO_FP(60)), FP_CONVERT_TO_FP(ready_threads));
   
-  load_avg = FP_CONVERT_TO_FP(first_term + second_term);
-  
-  //update_recent_cpu(cur); 
+  load_avg = FP_CONVERT_TO_INT_NEAREST(first_term + second_term); 
+
 }
 
-// the function calculates recent_cpu according to the equation:
-// recent_cpu = (((2 * load_avg) / (2 * load_avg + 1)) * recent_cpu) + nice
+/* the function calculates recent_cpu according to the equation:
+   recent_cpu = (((2 * load_avg) / (2 * load_avg + 1)) * recent_cpu) + nice */
 void 
 update_recent_cpu (struct thread *cur, void *aux)
 {
-  ASSERT (is_thread (cur));
-  if (cur != idle_thread)
-    {
+   ASSERT (is_thread (cur));
+   if (cur != idle_thread)
+   {
       int numerator = 2 * load_avg; // (2 * load_avg)
       int denomenator = (2 * load_avg) + 1; // (2 * load_avg + 1)
       int fraction = FP_DIVIDE(FP_CONVERT_TO_FP(numerator), FP_CONVERT_TO_FP(denomenator)); // numerator/denomenator (in FP ##)
       cur->recent_cpu = FP_CONVERT_TO_INT_NEAREST(fraction * cur->recent_cpu)  + (cur->nice);
-      //update_advanced_priority(cur);
-	}
+   }
 }
 
-// the function calculates the priority according to the equation: + reassigns it
-// priority = PRI_MAX - (recent_cpu / 4) - (nice * 2);
+/* the function calculates the priority according to the equation: + reassigns it
+   priority = PRI_MAX - (recent_cpu / 4) - (nice * 2) */
 void 
 update_advanced_priority (struct thread *cur, void *aux)
 {  
-  ASSERT (is_thread (cur));
-  ASSERT(thread_mlfqs);
-  ASSERT(intr_context());
-  if (cur != idle_thread)
-    {
-      (cur->priority) = PRI_MAX - (FP_CONVERT_TO_INT_NEAREST(FP_DIVIDE(FP_CONVERT_TO_FP(cur->recent_cpu), FP_CONVERT_TO_FP(4)))) -  (cur->nice * 2);  
+   ASSERT (is_thread (cur));
+   ASSERT(thread_mlfqs);
+   ASSERT(intr_context());
+   if (cur != idle_thread)
+   {
+      (cur->priority) = PRI_MAX - (FP_CONVERT_TO_INT_NEAREST(FP_DIVIDE(FP_CONVERT_TO_FP((cur->recent_cpu), FP_CONVERT_TO_FP(4)))) -  (cur->nice * 2);  
       // Make sure to make it fall within the defined limits
       if (cur->priority < PRI_MIN)
-        {
+      {
           cur->priority = PRI_MIN;
-        }
+      }
       else if (cur->priority > PRI_MAX)
-        {
+      {
           cur->priority = PRI_MAX;
-        }
-    }
+      }
+   }
 }
 
 
