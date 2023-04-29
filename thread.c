@@ -528,7 +528,7 @@ inc_recent_cpu(void)
   ASSERT(thread_mlfqs);
   ASSERT(intr_context());
   
-  if (thread_current() == idle_thread)
+  if (thread_current()->status != idle_thread)
   {
     thread_current()->recent_cpu++; /***/
   }
