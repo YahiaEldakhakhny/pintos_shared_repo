@@ -93,18 +93,6 @@ timer_elapsed (int64_t then)
   return timer_ticks () - then;
 }
 
-/* MODIFICATIONS */
-
-/* Compare function for sleeping thread list */
-static bool
-compare(const struct list_elem *a, const struct list_elem *b, void * aux UNUSED)
-{
-  struct sleep_list_elem* first = list_entry(a, struct sleep_list_elem, list_el);
-  struct sleep_list_elem* second = list_entry(b, struct sleep_list_elem, list_el);
-  return first->tick < second->tick;
-}
-
-/* END MODIFICATIONS */
 
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
