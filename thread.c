@@ -530,7 +530,7 @@ update_recent_cpu (struct thread *cur, void *aux)
       int numerator = 2 * load_avg; // (2 * load_avg)
       int denomenator = (2 * load_avg) + 1; // (2 * load_avg + 1)
       int fraction = FP_DIVIDE(FP_CONVERT_TO_FP(numerator), FP_CONVERT_TO_FP(denomenator)); // numerator/denomenator (in FP ##)
-      cur->recent_cpu = FP_CONVERT_TO_INT_NEAREST(fraction) + (cur->nice);
+      cur->recent_cpu = FP_CONVERT_TO_INT_NEAREST(fraction * cur->recent_cpu)  + (cur->nice);
       //update_advanced_priority(cur);
 	}
 }
