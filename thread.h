@@ -106,6 +106,10 @@ struct thread
     uint32_t *pagedir;                  /* Page directory. */
 #endif
 
+    /**MODIFICATIONS*/ // For Advanced Scheduler
+    int nice;
+    int recent_cpu;
+    /***/
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
@@ -150,4 +154,14 @@ void donate_priority(struct thread *target,int new_priority);
 bool list_priority_cmp(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 bool is_in_list(struct list *list, struct list_elem *target);
 bool list_priority_cmp_GT(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+
+/**MODIFICATION*/
+//void thread_calculate_recent_cpu (void);
+void update_recent_cpu (struct thread *cur, void *aux);
+//void thread_calculate_advanced_priority (void);
+void update_advanced_priority (struct thread *cur, void *aux);
+void update_load_avg (void);
+void increment_recent_cpu(void);
+
+/***/
 #endif /* threads/thread.h */
