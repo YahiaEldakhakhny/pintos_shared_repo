@@ -269,10 +269,20 @@ thread_create (const char *name, int priority,
   sf->ebp = 0;
   /* Add to run queue. */
   thread_unblock (t);
-  // if (thread_mlfqs)
-	/**Modification*/
-  //if (t->priority > thread_current ()-> priority) // uncomment this and see what happens
-  thread_yield();
+  /**MODIFICATION*/
+   if (thread_mlfqs)
+    {
+      calculate_recent_cpu (t);
+      calculate_advanced_priority (t);
+      thread_calculate_recent_cpu ();
+      thread_calculate_advanced_priority ();
+    }
+   /***/
+
+  /**MODIFICATION: Yield to t thread ONLY if current thread has less priority*/
+  if (t->priority > thread_current ()-> priority)
+  	thread_yield_current();
+   /***/
   return tid;
 }
 
@@ -397,6 +407,32 @@ thread_yield (void)
   intr_set_level (old_level);
 }
 
+/**MODIFICATION*/
+/* Let the dum thread yields the CPU. The dum thread is not put to sleep
+ * and may be schedule again immediately at the scheduler's whim
+ */
+void
+thread_yield_current (struct thread *dum)
+{
+  ASSERT (is_thread (dum));
+  enum intr_level old_level;
+
+  ASSERT (!intr_context ());
+
+  old_level = intr_disable ();
+  if (dum != idle_thread) {
+    /* For PRIORITY propose
+     * Change the ready_list to an ordered list in order to make sure that
+     * the thread with highest priority in the ready list get run first
+     */
+    list_insert_ordered(&ready_list, &dum->elem, list_priority_cmp, NULL);
+  }
+  dum->status = THREAD_READY;
+  schedule ();
+  intr_set_level (old_level);
+}
+/***/
+
 /* Invoke function 'func' on all threads, passing along 'aux'.
    This function must be called with interrupts off. */
 void
@@ -442,8 +478,21 @@ thread_set_nice (int new_nice)
 {
   /**MODIFICATION*/
   (thread_current()->nice) = new_nice;
-  calculate_advanced_priority(thread_current()); // update advanced priority after changing nice (will uncomment this)
-  thread_yield();
+  thread_calculate_advanced_priority(); // update advanced priority after changing nice
+
+    if (thread_current()->status == THREAD_READY)
+     {
+        enum intr_level old_level;
+        old_level = intr_disable ();
+        list_remove (&thread_current()->elem);
+        list_insert_ordered (&ready_list, &thread_current()->elem, list_priority_cmp, NULL);
+        intr_set_level (old_level);
+     }
+     else if ((thread_current()->status == THREAD_RUNNING) && (list_entry(list_begin (&ready_list), struct thread, elem)->priority > thread_current()->priority))
+       {
+         thread_yield_current(thread_current());
+       }
+  /***/
 }
 
 /* Returns the current thread's nice value. */
@@ -505,7 +554,7 @@ calculate_load_avg (struct thread *cur)
   
   load_avg = FP_CONVERT_TO_FP(first_term + second_term);
   
-  calculate_recent_cpu(cur); 
+  //calculate_recent_cpu(cur); 
 }
 
 // the function calculates recent_cpu according to the equation:
@@ -522,7 +571,13 @@ calculate_recent_cpu (struct thread *cur)
       cur->recent_cpu = FP_CONVERT_TO_INT_NEAREST(fraction) + (cur->nice);
     }
     // after updating recent_cpu -> recalculate priority
-    calculate_advanced_priority(cur);
+    //calculate_advanced_priority(cur);
+}
+
+void
+thread_calculate_recent_cpu (void)
+{
+  calculate_recent_cpu (thread_current ());
 }
 
 // the function calculates the priority according to the equation: + reassigns it
@@ -545,6 +600,12 @@ calculate_advanced_priority (struct thread *cur)
           cur->priority = PRI_MAX;
         }
     }
+}
+
+void
+thread_calculate_advanced_priority (void)
+{
+  calculate_advanced_priority (thread_current ());
 }
 
 /**END OF ADVANCED SCHEDULER TERRITORY*/
