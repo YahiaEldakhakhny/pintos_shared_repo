@@ -445,16 +445,7 @@ thread_set_nice (int new_nice)
   /**MODIFICATION*/
   (thread_current()->nice) = new_nice;
   update_advanced_priority(thread_current(), NULL); // update advanced priority after changing nice (will uncomment this)
-  
-  if(!list_empty(&ready_list))
-  {
-    struct thread* e = list_entry(list_front(&ready_list), struct thread, elem);
-    if(thread_current()->priority < e->priority)
-    {
-      thread_yield();
-    }
-  }
-
+  thread_yield();
 }
 
 /* Returns the current thread's nice value. */
