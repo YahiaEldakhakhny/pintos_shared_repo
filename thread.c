@@ -14,11 +14,19 @@
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
+/**MODIFICATION*/
+#include "fixed_point.h"
+/***/
 
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
+
+/**MODIFICATION*/
+/*Defining Average Load*/
+static int load_avg;
+/***/
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
@@ -158,6 +166,10 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+  /**MODIFICATION*/
+   /* At system boot, it is initialized to 0 */
+   load_avg = 0;
+   /***/
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -259,6 +271,7 @@ thread_create (const char *name, int priority,
   thread_unblock (t);
   // if (thread_mlfqs)
 	/**Modification*/
+  //if (t->priority > thread_current ()-> priority) // uncomment this and see what happens
   thread_yield();
   return tid;
 }
@@ -421,36 +434,57 @@ thread_get_priority (void)
   return thread_current ()->priority;
 }
 
+/**ADVANCED SCHEDULER TERRITORY*/
+
 /* Sets the current thread's nice value to NICE. */
 void
 thread_set_nice (int nice UNUSED) 
 {
-  /* Not yet implemented. */
+  /**MODIFICATION*/
+  (thread_current()->nice) = new_nice;
+  //calculate_advanced_priority(thread_current()); // update advanced priority after changing nice (will uncomment this)
+  thread_yield();
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  /**MODIFICATION*/
+  return (thread_current()->nice);
+  /***/
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  /**MODIFICATION*/
+  return FP_CONVERT_TO_INT_NEAREST(FP_CONVERT_TO_FP((load_avg) * (100)));
+  /***/
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  /**MODIFICATION*/
+  return FP_CONVERT_TO_INT_NEAREST(FP_CONVERT_TO_FP((thread_current ()->recent_cpu) * (100)));
+  /***/
 }
+
+void
+inc_recent_cpu(void)
+{
+  ASSERT(thread_mlfqs);
+  ASSERT(intr_context());
+  
+  if (thread_current() == idle_thread)
+  {
+    thread_current()->recent_cpu++; /***/
+  }
+}
+
 
 /* Idle thread.  Executes when no other thread is ready to run.
    The idle thread is initially put on the ready list by
