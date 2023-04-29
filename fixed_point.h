@@ -26,12 +26,12 @@
 // Macro-like functions: Conversion
 #define FP_CONVERT_TO_FP(X) 								(X) * (FP_FRACTION)
 #define FP_CONVERT_TO_INT_ZERO(X) 					(X) / (FP_FRACTION) 
-#define FP_CONVERT_TO_INT_APPROX(X) 			( ( (X) >= 0 ) ? ( ( ( (X) + (FP_FRACTION) ) / 2) / (FP_FRACTION) ) : ( ( ( (X) - (FP_FRACTION) ) / 2) / (FP_FRACTION) ) )
+#define FP_CONVERT_TO_INT_NEAREST(X) 			( ( (X) >= 0 ) ? ( ( ( (X) + (FP_FRACTION) ) / 2) / (FP_FRACTION) ) : ( ( ( (X) - (FP_FRACTION) ) / 2) / (FP_FRACTION) ) )
 
 // Macro-like functions: Arithmetic Operations
 #define FP_ADD(X, Y) 														( ( (X) + (Y) ) * (FP_FRACTION) )
 #define FP_SUB(X, Y) 														( ( (X) - (Y) ) * (FP_FRACTION) )
-#define FP_MULTIPLE(X, Y) 											( ( ( (int64_t)(X) ) * (Y) ) / (FP_FRACTION) )
+#define FP_MULTIPLY(X, Y) 											( ( ( (int64_t)(X) ) * (Y) ) / (FP_FRACTION) )
 #define FP_DIVIDE(X, Y) 												( ( ( (int64_t)(X) ) * (FP_FRACTION) ) / (Y))
 
 #endif
