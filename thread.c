@@ -608,12 +608,6 @@ thread_calculate_advanced_priority (void)
   calculate_advanced_priority (thread_current ());
 }
 
-/* Calculate recent_cpu for a thread */
-void
-thread_calculate_recent_cpu (void)
-{
-  calculate_recent_cpu (thread_current (), NULL);
-}
 
 /* Once per second the value of recent_cpu is recalculated
  * for every thread (whether running, ready, or blocked)
@@ -634,7 +628,7 @@ calculate_advanced_priority_for_all (void)
   /* resort ready_list */
   if (!list_empty (&ready_list))
     {
-      list_sort (&ready_list, priority_more, NULL);
+      list_sort (&ready_list, list_priority_cmp, NULL);
     }
 }
 
