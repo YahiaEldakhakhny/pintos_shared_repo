@@ -265,11 +265,12 @@ timer_interrupt (struct intr_frame *args UNUSED)
     inc_recent_cpu();
     if (ticks % TIMER_FREQ == 0)
     {
-      calculate_load_avg (thread_current()); // this function calls recent_cpu which calls advanced priority
+      calculate_load_avg (); 
+      calculate_recent_cpu_for_all ();
     }
     else if (ticks % 4 == 0)
     {
-      calculate_advanced_priority(thread_current());
+      calculate_advanced_priority_for_all ();
     }
   }
    /***/
