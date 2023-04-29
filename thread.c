@@ -480,7 +480,7 @@ increment_recent_cpu(void)
   
    if (thread_current() == idle_thread)
    {
-      thread_current()->recent_cpu++;
+      (thread_current()->recent_cpu)++;
    }
 }
 
