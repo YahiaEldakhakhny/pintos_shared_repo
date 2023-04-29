@@ -485,6 +485,31 @@ inc_recent_cpu(void)
   }
 }
 
+// load_avg = (59 / 60) * load_avg  +  (1 / 60) * ready_thread
+void 
+calculate_load_avg (struct thread *cur)
+{
+  ASSERT(thread_mlfqs);
+  ASSERT(intr_context());
+  
+  int ready_threads;
+  ready_threads = list_size (&ready_list);
+
+  if (cur != idle_thread)
+    {
+      ready_threads++;
+    }
+
+  int first_term = FP_MULTIPLY(FP_DIVIDE(FP_CONVERT_TO_FP(59), FP_CONVERT_TO_FP(60)), FP_CONVERT_TO_FP(load_avg));
+  int second_term = FP_MULTIPLY(FP_DIVIDE(FP_CONVERT_TO_FP(1), FP_CONVERT_TO_FP(60)), FP_CONVERT_TO_FP(ready_threads));
+  
+  load_avg = FP_CONVERT_TO_FP(first_term + second_term);
+  
+  //calculate_recent_cpu(cur); // /***/ will uncomment this
+}
+
+/**END OF ADVANCED SCHEDULER TERRITORY*/
+
 
 /* Idle thread.  Executes when no other thread is ready to run.
    The idle thread is initially put on the ready list by
