@@ -231,6 +231,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   
+  
 /* MODIFICATIONS */
 
 /**
@@ -258,6 +259,23 @@ timer_interrupt (struct intr_frame *args UNUSED)
   /* END MODIFICATIONS */
   
   thread_tick ();
+  
+  /**MODIFICATION*/
+  if (thread_mlfqs)
+  {
+    increment_recent_cpu();
+    if (ticks % TIMER_FREQ == 0)
+    {
+      update_load_avg (); 
+	  thread_foreach(update_recent_cpu, NULL);
+    }
+    else if (ticks % 4 == 0)
+    {
+      thread_foreach(update_advanced_priority, NULL);
+	}
+  }
+  /***/
+  
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
