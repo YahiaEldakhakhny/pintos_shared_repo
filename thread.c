@@ -438,7 +438,7 @@ thread_get_priority (void)
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED) 
+thread_set_nice (int new_nice) 
 {
   /**MODIFICATION*/
   (thread_current()->nice) = new_nice;
@@ -505,8 +505,26 @@ calculate_load_avg (struct thread *cur)
   
   load_avg = FP_CONVERT_TO_FP(first_term + second_term);
   
-  //calculate_recent_cpu(cur); // /***/ will uncomment this
+  calculate_recent_cpu(cur); 
 }
+
+// the function calculates recent_cpu according to the equation:
+// recent_cpu = (((2 * load_avg) / (2 * load_avg + 1)) * recent_cpu) + nice
+void 
+calculate_recent_cpu (struct thread *cur)
+{
+
+  if (cur != idle_thread)
+    {
+      int numerator = 2 * load_avg; // (2 * load_avg)
+      int denomenator = (2 * load_avg) + 1; // (2 * load_avg + 1)
+      int fraction = FP_DIVIDE(FP_CONVERT_TO_FP(numerator), FP_CONVERT_TO_FP(denomenator)); // numerator/denomenator (in FP ##)
+      cur->recent_cpu = FP_CONVERT_TO_INT_NEAREST(fraction) + (cur->nice);
+    }
+    // after updating recent_cpu -> recalculate priority
+    //calculate_advanced_priority(cur);
+}
+
 
 /**END OF ADVANCED SCHEDULER TERRITORY*/
 
