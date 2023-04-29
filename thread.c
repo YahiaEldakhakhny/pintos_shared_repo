@@ -442,7 +442,7 @@ thread_set_nice (int new_nice)
 {
   /**MODIFICATION*/
   (thread_current()->nice) = new_nice;
-  //calculate_advanced_priority(thread_current()); // update advanced priority after changing nice (will uncomment this)
+  calculate_advanced_priority(thread_current()); // update advanced priority after changing nice (will uncomment this)
   thread_yield();
 }
 
@@ -522,9 +522,30 @@ calculate_recent_cpu (struct thread *cur)
       cur->recent_cpu = FP_CONVERT_TO_INT_NEAREST(fraction) + (cur->nice);
     }
     // after updating recent_cpu -> recalculate priority
-    //calculate_advanced_priority(cur);
+    calculate_advanced_priority(cur);
 }
 
+// the function calculates the priority according to the equation: + reassigns it
+// priority = PRI_MAX - (recent_cpu / 4) - (nice * 2);
+void 
+calculate_advanced_priority (struct thread *cur)
+{
+  ASSERT(thread_mlfqs);
+  
+  if (cur != idle_thread)
+    {
+      (cur->priority) = PRI_MAX - (FP_CONVERT_TO_INT_NEAREST(FP_DIVIDE(FP_CONVERT_TO_FP(cur->recent_cpu), FP_CONVERT_TO_FP(4)))) -  (cur->nice * 2);  
+      // Make sure to make it fall within the defined limits
+      if (cur->priority < PRI_MIN)
+        {
+          cur->priority = PRI_MIN;
+        }
+      else if (cur->priority > PRI_MAX)
+        {
+          cur->priority = PRI_MAX;
+        }
+    }
+}
 
 /**END OF ADVANCED SCHEDULER TERRITORY*/
 
@@ -615,7 +636,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->old_priority = t->priority=priority;
   t->donated=false;
   t->magic = THREAD_MAGIC;
-
+  /**MODIFICATION*/
+  t->nice = NICE_DEFAULT;
+  t->recent_cpu = RECENT_CPU_INIT;
+  /***/
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
