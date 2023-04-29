@@ -608,6 +608,36 @@ thread_calculate_advanced_priority (void)
   calculate_advanced_priority (thread_current ());
 }
 
+/* Calculate recent_cpu for a thread */
+void
+thread_calculate_recent_cpu (void)
+{
+  calculate_recent_cpu (thread_current (), NULL);
+}
+
+/* Once per second the value of recent_cpu is recalculated
+ * for every thread (whether running, ready, or blocked)
+ */
+void
+calculate_recent_cpu_for_all (void)
+{
+  thread_foreach (calculate_recent_cpu, NULL);
+}
+
+/* Calculate priority for all threads in all_list.
+ *  It is also recalculated once every fourth clock tick, for every thread.
+ */
+void
+calculate_advanced_priority_for_all (void)
+{
+  thread_foreach (calculate_advanced_priority, NULL);
+  /* resort ready_list */
+  if (!list_empty (&ready_list))
+    {
+      list_sort (&ready_list, priority_more, NULL);
+    }
+}
+
 /**END OF ADVANCED SCHEDULER TERRITORY*/
 
 
